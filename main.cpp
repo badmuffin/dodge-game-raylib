@@ -12,6 +12,79 @@ enum GameState
   GAME_OVER
 };
 
+void UpdateGame(
+    Rectangle &player,
+    Rectangle &enemy,
+    float &playerSpeed,
+    float &enemySpeed,
+    float deltaTime,
+    int &score,
+    GameState &currentState)
+{
+  // player input handling
+  if (currentState == PLAYING)
+  {
+    if (IsKeyDown(KEY_A))
+      player.x -= playerSpeed * deltaTime;
+    if (IsKeyDown(KEY_D))
+      player.x += playerSpeed * deltaTime;
+  }
+
+  // to keep player inside the game window
+  player.x = std::clamp(player.x, 0.0f, (float)WINDOW_WIDTH - player.width);
+
+  // handle enemy
+  if (currentState == PLAYING)
+  {
+    enemy.y += enemySpeed * deltaTime;
+
+    // enemy reached the bottom of the window
+    if (enemy.y > WINDOW_HEIGHT)
+    {
+      enemy.y = -enemy.height;
+      enemy.x = (float)GetRandomValue(0, WINDOW_WIDTH - (int)enemy.width);
+
+      score++;
+      enemySpeed += 10.0f; // increasing player speed with each turn
+    }
+
+    if (CheckCollisionRecs(player, enemy))
+      currentState = GAME_OVER;
+  }
+
+  if (currentState == MENU and IsKeyPressed(KEY_SPACE))
+    currentState = PLAYING;
+
+  // restart
+  if (currentState == GAME_OVER and IsKeyPressed(KEY_R))
+  {
+    player.x = 180;
+    enemy.x = (float)GetRandomValue(0, WINDOW_WIDTH - (int)enemy.width);
+    enemy.y = -50;
+    enemySpeed = 220.0f;
+
+    score = 0;
+    currentState = MENU;
+  }
+}
+
+void DrawGame(const Rectangle &player, const Rectangle &enemy, int score, GameState currentState)
+{
+  DrawRectangleRec(player, SKYBLUE);
+  DrawRectangleRec(enemy, RED);
+
+  DrawText(TextFormat("Score: %d", score), 20, 20, 25, WHITE);
+
+  if (currentState == MENU)
+    DrawText("Press Space to Start", 80, 250, 24, WHITE);
+
+  if (currentState == GAME_OVER)
+  {
+    DrawText("GAME OVER", 80, 250, 40, RED);
+    DrawText("Press R to Restart", 80, 310, 20, WHITE);
+  }
+}
+
 int main()
 {
   InitWindow(WINDOW_WIDTH, WINDOW_HEIGHT, "Dodge the blocks");
@@ -29,72 +102,11 @@ int main()
   while (!WindowShouldClose())
   {
     float deltaTime = GetFrameTime();
+    UpdateGame(player, enemy, playerSpeed, enemySpeed, deltaTime, score, currentState);
 
-    /*================ user input handling =================*/
-    if (currentState == PLAYING)
-    {
-      if (IsKeyDown(KEY_A))
-        player.x -= playerSpeed * deltaTime;
-      if (IsKeyDown(KEY_D))
-        player.x += playerSpeed * deltaTime;
-    }
-
-    // to keep player inside the game window.
-    player.x = std::clamp(player.x, 0.0f, (float)WINDOW_WIDTH - player.width);
-
-    // ================ update the scene =========================
-    if (currentState == PLAYING)
-    {
-      enemy.y += enemySpeed * deltaTime;
-
-      // enemy reached the bottom of the window
-      if (enemy.y > WINDOW_HEIGHT)
-      {
-        enemy.y = -enemy.height;
-        enemy.x = (float)GetRandomValue(0, WINDOW_WIDTH - (int)enemy.width);
-
-        score++;
-        enemySpeed += 10.0f; // increasing player speed with each turn
-      }
-
-      if (CheckCollisionRecs(player, enemy))
-        currentState = GAME_OVER;
-    }
-
-    if (currentState == MENU and IsKeyPressed(KEY_SPACE))
-      currentState = PLAYING;
-
-    // restart
-    if (currentState == GAME_OVER and IsKeyPressed(KEY_R))
-    {
-      player.x = 180;
-      enemy.x = (float)GetRandomValue(0, WINDOW_WIDTH - (int)enemy.width);
-      enemy.y = -50;
-      enemySpeed = 220.0f;
-
-      score = 0;
-      currentState = MENU;
-    }
-
-    // ================== Draw ==========================
     BeginDrawing();
-
     ClearBackground(BLACK);
-
-    DrawRectangleRec(player, SKYBLUE);
-    DrawRectangleRec(enemy, RED);
-
-    DrawText(TextFormat("Score: %d", score), 20, 20, 25, WHITE);
-
-    if (currentState == MENU)
-      DrawText("Press Space to Start", 80, 250, 24, WHITE);
-
-    if (currentState == GAME_OVER)
-    {
-      DrawText("GAME OVER", 80, 250, 40, RED);
-      DrawText("Press R to Restart", 80, 310, 20, WHITE);
-    }
-
+    DrawGame(player, enemy, score, currentState);
     EndDrawing();
   }
 
