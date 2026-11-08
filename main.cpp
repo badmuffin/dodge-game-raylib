@@ -15,29 +15,31 @@ enum GameState
 void UpdateGame(
     Rectangle &player,
     Rectangle &enemy,
-    float &playerSpeed,
+    float playerSpeed,
     float &enemySpeed,
     float deltaTime,
     int &score,
     GameState &currentState)
 {
-  // player input handling
-  if (currentState == PLAYING)
+  switch (currentState)
   {
+  case MENU:
+    if (IsKeyPressed(KEY_SPACE))
+      currentState = PLAYING;
+    break;
+
+  case PLAYING:
+    // player input handling
     if (IsKeyDown(KEY_A))
       player.x -= playerSpeed * deltaTime;
     if (IsKeyDown(KEY_D))
       player.x += playerSpeed * deltaTime;
-  }
 
-  // to keep player inside the game window
-  player.x = std::clamp(player.x, 0.0f, (float)WINDOW_WIDTH - player.width);
+    // to keep player inside the game window
+    player.x = std::clamp(player.x, 0.0f, (float)WINDOW_WIDTH - player.width);
 
-  // handle enemy
-  if (currentState == PLAYING)
-  {
+    // handle enemy
     enemy.y += enemySpeed * deltaTime;
-
     // enemy reached the bottom of the window
     if (enemy.y > WINDOW_HEIGHT)
     {
@@ -50,21 +52,27 @@ void UpdateGame(
 
     if (CheckCollisionRecs(player, enemy))
       currentState = GAME_OVER;
-  }
+    if (IsKeyPressed(KEY_P))
+      currentState = PAUSED;
+    break;
 
-  if (currentState == MENU and IsKeyPressed(KEY_SPACE))
-    currentState = PLAYING;
+  case PAUSED:
+    if (IsKeyPressed(KEY_P))
+      currentState = PLAYING;
+    break;
 
-  // restart
-  if (currentState == GAME_OVER and IsKeyPressed(KEY_R))
-  {
-    player.x = 180;
-    enemy.x = (float)GetRandomValue(0, WINDOW_WIDTH - (int)enemy.width);
-    enemy.y = -50;
-    enemySpeed = 220.0f;
+  case GAME_OVER:
+    if (IsKeyPressed(KEY_R))
+    {
+      player.x = 180;
+      enemy.x = (float)GetRandomValue(0, WINDOW_WIDTH - (int)enemy.width);
+      enemy.y = -50;
+      enemySpeed = 220.0f;
 
-    score = 0;
-    currentState = MENU;
+      score = 0;
+      currentState = MENU;
+    }
+    break;
   }
 }
 
@@ -77,6 +85,9 @@ void DrawGame(const Rectangle &player, const Rectangle &enemy, int score, GameSt
 
   if (currentState == MENU)
     DrawText("Press Space to Start", 80, 250, 24, WHITE);
+
+  if (currentState == PAUSED)
+    DrawText("Press P to unpause", 80, 250, 24, WHITE);
 
   if (currentState == GAME_OVER)
   {
