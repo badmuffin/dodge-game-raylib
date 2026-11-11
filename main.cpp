@@ -1,5 +1,6 @@
 #include "raylib.h"
 #include <algorithm>
+#include <vector>
 
 int WINDOW_WIDTH = 400;
 int WINDOW_HEIGHT = 720;
@@ -14,7 +15,7 @@ enum GameState
 
 void UpdateGame(
     Rectangle &player,
-    Rectangle &enemy,
+    std::vector<Rectangle> &enemies,
     float playerSpeed,
     float &enemySpeed,
     float deltaTime,
@@ -38,22 +39,25 @@ void UpdateGame(
     // to keep player inside the game window
     player.x = std::clamp(player.x, 0.0f, (float)GetScreenWidth() - player.width);
 
-    // handle enemy
-    enemy.y += enemySpeed * deltaTime;
-    // enemy reached the bottom of the window
-    if (enemy.y > GetScreenHeight())
+    for (auto &enemy : enemies)
     {
-      enemy.y = -enemy.height;
-      enemy.x = (float)GetRandomValue(0, GetScreenWidth() - (int)enemy.width);
+      enemy.y += enemySpeed * deltaTime;
 
-      score++;
-      enemySpeed += 10.0f; // increasing player speed with each turn
+      // enemy reached the bottom of the window
+      if (enemy.y > GetScreenHeight())
+      {
+        enemy.y = -enemy.height;
+        enemy.x = (float)GetRandomValue(0, GetScreenWidth() - (int)enemy.width);
+
+        score++;
+        enemySpeed += 10.0f; // increasing player speed with each turn
+      }
+
+      if (CheckCollisionRecs(player, enemy))
+        currentState = GAME_OVER;
+      if (IsKeyPressed(KEY_P))
+        currentState = PAUSED;
     }
-
-    if (CheckCollisionRecs(player, enemy))
-      currentState = GAME_OVER;
-    if (IsKeyPressed(KEY_P))
-      currentState = PAUSED;
     break;
 
   case PAUSED:
@@ -65,8 +69,11 @@ void UpdateGame(
     if (IsKeyPressed(KEY_R))
     {
       player.x = 180;
-      enemy.x = (float)GetRandomValue(0, GetScreenWidth() - (int)enemy.width);
-      enemy.y = -50;
+      for (size_t i = 0; i < enemies.size(); i++)
+      {
+        enemies[i].x = (float)GetRandomValue(0, GetScreenWidth() - (int)enemies[i].width);
+        enemies[i].y = -200.0f * (i + 1) - (float)GetRandomValue(0, 200);
+      }
       enemySpeed = 220.0f;
 
       score = 0;
@@ -84,10 +91,14 @@ void DrawTextInCenter(const char *title, int fontSize, int yOffset = 0, Color co
   DrawText(title, x, y, fontSize, color);
 }
 
-void DrawGame(const Rectangle &player, const Rectangle &enemy, int score, GameState currentState)
+void DrawGame(const Rectangle &player, const std::vector<Rectangle> &enemies, int score, GameState currentState)
 {
   DrawRectangleRec(player, SKYBLUE);
-  DrawRectangleRec(enemy, RED);
+  for (auto &enemy : enemies)
+  {
+
+    DrawRectangleRec(enemy, RED);
+  }
 
   DrawText(TextFormat("Score: %d", score), 20, 20, 25, WHITE);
 
@@ -114,7 +125,17 @@ int main()
   Rectangle player = {180, 600, 40, 40};
   float playerSpeed = 240.0f;
 
-  Rectangle enemy = {200, -100, 40, 40};
+  std::vector<Rectangle> enemies;
+  for (int i = 0; i < 3; i++)
+  {
+    Rectangle enemy = {
+        (float)GetRandomValue(0, GetScreenWidth() - 40),
+        -200.0f * (i + 1) - (float)GetRandomValue(0, 200),
+        40,
+        40};
+
+    enemies.push_back(enemy);
+  }
   float enemySpeed = 220.0f;
 
   int score = 0;
@@ -123,11 +144,11 @@ int main()
   while (!WindowShouldClose())
   {
     float deltaTime = GetFrameTime();
-    UpdateGame(player, enemy, playerSpeed, enemySpeed, deltaTime, score, currentState);
+    UpdateGame(player, enemies, playerSpeed, enemySpeed, deltaTime, score, currentState);
 
     BeginDrawing();
     ClearBackground(BLACK);
-    DrawGame(player, enemy, score, currentState);
+    DrawGame(player, enemies, score, currentState);
     EndDrawing();
   }
 
